@@ -30,8 +30,15 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-[data-testid="stMetric"] { background:#f8fafc; border-radius:10px; padding:14px; }
+[data-testid="stMetric"] {
+    background: var(--background-color);
+    border: 1px solid rgba(128,128,128,0.2);
+    border-radius:10px;
+    padding:14px;
+}
 [data-testid="stMetricLabel"] { font-size:12px !important; }
+[data-testid="stMetricValue"] { color: var(--text-color) !important; }
+[data-testid="stMetricDelta"] { color: var(--text-color) !important; }
 </style>
 """, unsafe_allow_html=True)
 
