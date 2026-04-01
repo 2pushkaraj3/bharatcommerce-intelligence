@@ -1,0 +1,65 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────
+#  Airflow — add this to your existing docker-compose.yml
+#  OR run separately: docker compose -f docker-compose-airflow.yml up -d
+#
+#  UI: http://localhost:8081
+#  Login: admin / admin
+# ─────────────────────────────────────────────────────────────
+
+networks:
+  bharatnet:
+    driver: bridge
+
+volumes:
+  airflow_db:
+
+services:
+
+  airflow:
+    image: apache/airflow:2.9.1-python3.11
+    container_name: bc_airflow
+    networks: [bharatnet]
+    ports:
+      - "8081:8080"
+    volumes:
+      # DAGs folder — Airflow watches this for changes live
+      - ./airflow/dags:/opt/airflow/dags
+      # Share the data lake with the pipeline container
+      - ./data_lake:/opt/airflow/data_lake
+      # dbt project so Airflow can run dbt commands
+      - ./dbt:/opt/airflow/dbt
+      # GCP key for BigQuery access
+      - ./gcp_key.json:/opt/airflow/gcp_key.json:ro
+      - airflow_db:/opt/airflow
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      AIRFLOW__WEBSERVER__SECRET_KEY: bharatcommerce-local-secret
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+      # Pipeline env vars
+      GCP_PROJECT: sigma-composite-492018-p3
+      GCP_KEY_FILE: /opt/airflow/gcp_key.json
+      DATA_LAKE_PATH: /opt/airflow/data_lake
+      DBT_DIR: /opt/airflow/dbt
+    command: >
+      bash -c "
+        pip install dbt-core==1.5.6 dbt-bigquery==1.5.6
+                    google-cloud-bigquery==3.11.4 db-dtypes==1.2.0
+                    --quiet &&
+        airflow db migrate &&
+        airflow users create
+          --username admin --password admin
+          --firstname Bharat --lastname Admin
+          --role Admin --email admin@local.dev 2>/dev/null || true &&
+        airflow scheduler &
+        airflow webserver
+      "
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
