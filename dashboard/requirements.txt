@@ -2,4 +2,6 @@ streamlit==1.35.0
 pandas==2.2.2
 pyarrow==15.0.2
 plotly==5.22.0
-watchdog==4.0.1
+google-cloud-bigquery==3.11.4
+google-auth==2.22.0
+db-dtypes==1.2.0
