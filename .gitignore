@@ -1,0 +1,14 @@
+gcp_key.json
+.env
+.venv/
+data_lake/
+dbt/target/
+dbt/dbt_packages/
+__pycache__/
+*.pyc
+.DS_Store
+.streamlit/secrets.toml
+dbt/profiles.yml
+dbt/.user.yml
+dbt/logs/
+dbt/package-lock.yml

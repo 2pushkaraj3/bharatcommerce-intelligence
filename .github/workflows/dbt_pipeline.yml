@@ -1,0 +1,100 @@
+name: dbt pipeline — Bharatcommerce
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # every 6 hours — keeps BigQuery fresh
+  workflow_dispatch:         # manual trigger from GitHub UI
+  push:
+    paths:
+      - "dbt/**"             # run on any dbt model change
+
+jobs:
+  dbt-run:
+    name: Run dbt pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dbt + BigQuery adapter
+        run: |
+          pip install \
+            dbt-core==1.8.3 \
+            dbt-bigquery==1.8.2 \
+            dbt-utils==1.2.0
+
+      - name: Write GCP service account key
+        run: echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcp_key.json
+
+      - name: Write dbt profiles
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << 'EOF'
+          bharatcommerce:
+            target: prod
+            outputs:
+              prod:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.GCP_PROJECT_ID }}
+                dataset: bharatcommerce_prod
+                keyfile: /tmp/gcp_key.json
+                location: asia-south1
+                threads: 4
+                timeout_seconds: 300
+          EOF
+
+      - name: dbt deps (install packages)
+        working-directory: dbt
+        run: dbt deps
+
+      - name: dbt run (build all models)
+        working-directory: dbt
+        run: |
+          dbt run \
+            --profiles-dir ~/.dbt \
+            --target prod \
+            --select +fct_orders +agg_daily_gmv +agg_state_performance +agg_anomaly_log
+
+      - name: dbt test (run all quality checks)
+        working-directory: dbt
+        run: |
+          dbt test \
+            --profiles-dir ~/.dbt \
+            --target prod
+
+      - name: dbt generate docs
+        working-directory: dbt
+        run: |
+          dbt docs generate \
+            --profiles-dir ~/.dbt \
+            --target prod
+
+      - name: Upload dbt docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs
+          path: dbt/target/
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "dbt pipeline FAILED — check logs above"
+          # Add Slack webhook here if you have one:
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"dbt pipeline failed on bharatcommerce"}' \
+          #   ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Cleanup credentials
+        if: always()
+        run: rm -f /tmp/gcp_key.json

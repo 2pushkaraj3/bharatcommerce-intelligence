@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: stg_orders_raw
+    description: "Bronze: raw orders, 1-to-1 mirror of Parquet lake"
+    columns:
+      - name: order_id
+        tests: [not_null]
+      - name: total_amount_inr
+        tests: [not_null]
+
+  - name: int_orders_cleaned
+    description: "Silver: deduped, typed, India-specific signals added"
+    columns:
+      - name: order_id
+        tests: [not_null, unique]
+      - name: total_amount_inr
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 500000
+      - name: payment_method
+        tests:
+          - accepted_values:
+              values: ['COD', 'UPI', 'Card', 'Wallet']
+      - name: category
+        tests:
+          - accepted_values:
+              values: ['Fashion', 'Electronics', 'Home', 'Beauty', 'Books', 'Grocery']
+
+  - name: fct_orders
+    description: "Gold: analytics-ready fact table, all dashboards query this"
+    columns:
+      - name: order_key
+        tests: [not_null, unique]
+      - name: order_id
+        tests: [not_null]
+      - name: total_amount_inr
+        tests: [not_null]
+
+  - name: agg_daily_gmv
+    description: "Gold: GMV by state/category/day with WoW and DoD changes"
+
+  - name: agg_state_performance
+    description: "Gold: COD risk score per state — the flagship metric"
+
+  - name: agg_anomaly_log
+    description: "Gold: all flagged orders with severity classification"

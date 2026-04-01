@@ -1,0 +1,35 @@
+{{ config(materialized='table', schema='gold') }}
+
+select
+    {{ dbt_utils.generate_surrogate_key(['order_id']) }}  as order_key,
+    order_id,
+    order_date,
+    event_timestamp,
+    customer_id,
+    customer_name,
+    customer_tier,
+    city,
+    state,
+    pincode,
+    category,
+    subcategory,
+    quantity,
+    unit_price_inr,
+    total_amount_inr,
+    payment_method,
+    is_cod,
+    is_upi,
+    is_high_cod_risk,
+    is_tier3_customer,
+    is_high_return_risk,
+    order_value_tier,
+    is_anomalous,
+    anomaly_reason,
+    expected_return_rate,
+    warehouse_id,
+    estimated_days,
+    is_express,
+    ingestion_id,
+    loaded_at
+
+from {{ ref('int_orders_cleaned') }}

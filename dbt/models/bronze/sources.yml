@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: raw
+    dataset: bharatcommerce
+    tables:
+      - name: orders_raw
+        description: "Raw orders loaded from local Parquet data lake"
+      - name: returns_raw
+        description: "Raw returns loaded from local Parquet data lake"
