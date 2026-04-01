@@ -60,8 +60,7 @@ default_args = {
 dag = DAG(
     dag_id          = "bc_main_pipeline",
     description     = "Bharatcommerce: load Parquet → BigQuery → dbt run → dbt test",
-    schedule_interval = "0 */6 * * *",   # every 6 hours
-    start_date      = datetime(2024, 1, 1),
+    schedule_interval = "*/30 * * * *",  # every 30 minutes    start_date      = datetime(2024, 1, 1),
     catchup         = False,
     max_active_runs = 1,                 # never run two loads in parallel
     default_args    = default_args,
